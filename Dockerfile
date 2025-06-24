@@ -1,11 +1,13 @@
 FROM python:3.10
 
-# Set working directory to /app/Server
+# Set working directory to /app
 WORKDIR /app
 
+# Copy everything into container
 COPY . .
 
-WORKDIR /app/Server  # <== this is the key fix
+# Change working directory to where main.py lives
+WORKDIR /app/Server
 
 # Install dependencies
 RUN pip install --no-cache-dir -r /app/requirements.txt
@@ -13,5 +15,5 @@ RUN pip install --no-cache-dir -r /app/requirements.txt
 # Expose port
 EXPOSE 8000
 
-# Run your app (main.py inside app/)
+# Set start command (entry point)
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
