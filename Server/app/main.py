@@ -17,6 +17,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Root route
+@app.get("/")
+def root():
+    return{"message":"Welcome to Feedback API"}
+
+#Intialize MongoDB Atlas connection on startup
 @app.on_event("startup")
 async def startup_event():
     await init_db()
