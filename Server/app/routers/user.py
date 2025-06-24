@@ -1,24 +1,24 @@
 from fastapi import APIRouter, HTTPException
 from app.models.user import User
 from app.models.feedback import Feedback
-from app.schemas.user import UserCreate, UserOut
+from app.schemas.user import UserCreate, UserOut, UserLogin
 from typing import List
 from collections import Counter
+from passlib.context import CryptContext
 
 router = APIRouter()
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# Register a new user (Manager only)
+# ✅ Register a new user (anyone allowed to register now)
 @router.post("/", response_model=UserOut)
 async def create_user(user: UserCreate):
-    # manager = await User.find_one(User.role == "manager")
-    # if not manager:
-    #     raise HTTPException(status_code=403, detail="Only manager can register employees")
-
     existing = await User.find_one(User.employee_id == user.employee_id)
     if existing:
         raise HTTPException(status_code=400, detail="Employee ID already exists")
-    
+
+    hashed_password = pwd_context.hash(user.password)
     new_user = User(**user.dict())
+    new_user.password = hashed_password
     await new_user.insert()
     return UserOut(
         name=new_user.name,
@@ -27,7 +27,21 @@ async def create_user(user: UserCreate):
         employee_id=new_user.employee_id
     )
 
-# Manager: View all team members with feedback stats
+# 🆕 ✅ Login route
+@router.post("/login")
+async def login_user(credentials: UserLogin):
+    user = await User.find_one(User.employee_id == credentials.employee_id)
+    if not user or not pwd_context.verify(credentials.password, user.password):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    return {
+        "message": "Login successful",
+        "name": user.name,
+        "email": user.email,
+        "role": user.role,
+        "employee_id": user.employee_id
+    }
+
+# ✅ Manager: View all team members with feedback stats
 @router.get("/dashboard/manager", response_model=List[dict])
 async def manager_dashboard():
     employees = await User.find(User.role == "employee").to_list()
@@ -47,7 +61,7 @@ async def manager_dashboard():
 
     return result
 
-# Employee: View timeline of received feedback
+# ✅ Employee: View timeline of received feedback
 @router.get("/dashboard/employee/{employee_id}", response_model=List[dict])
 async def employee_dashboard(employee_id: str):
     user = await User.find_one(User.employee_id == employee_id)
@@ -70,20 +84,17 @@ async def employee_dashboard(employee_id: str):
         })
     return timeline
 
-# Update employee
+# ✅ Update employee
 @router.put("/{employee_id}", response_model=UserOut)
 async def update_user(employee_id: str, updated_data: UserCreate):
     user = await User.find_one(User.employee_id == employee_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    manager = await User.find_one(User.role == "manager")
-    if not manager:
-        raise HTTPException(status_code=403, detail="Only manager can update employee")
-
+    hashed_password = pwd_context.hash(updated_data.password)
     user.name = updated_data.name
     user.email = updated_data.email
-    user.password = updated_data.password
+    user.password = hashed_password
     user.role = updated_data.role
     await user.save()
 
@@ -94,16 +105,12 @@ async def update_user(employee_id: str, updated_data: UserCreate):
         employee_id=user.employee_id
     )
 
-# Delete employee
+# ✅ Delete employee
 @router.delete("/{employee_id}")
 async def delete_user(employee_id: str):
     user = await User.find_one(User.employee_id == employee_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-
-    manager = await User.find_one(User.role == "manager")
-    if not manager:
-        raise HTTPException(status_code=403, detail="Only manager can delete employee")
 
     await user.delete()
     return {"message": f"Employee {employee_id} deleted successfully"}

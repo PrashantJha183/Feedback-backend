@@ -9,10 +9,9 @@ class UserCreate(BaseModel):
     employee_id: str
 
 class UserOut(BaseModel):
-    id: str
     name: str
     email: EmailStr
-    role: str
+    role: Literal["manager", "employee"]
     employee_id: str
 
 class UserLogin(BaseModel):
