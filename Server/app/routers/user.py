@@ -9,7 +9,7 @@ from passlib.context import CryptContext
 router = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
-# ✅ Register a new user (anyone allowed to register now)
+# Register a new user (anyone allowed to register now)
 @router.post("/", response_model=UserOut)
 async def create_user(user: UserCreate):
     existing = await User.find_one(User.employee_id == user.employee_id)
@@ -27,7 +27,7 @@ async def create_user(user: UserCreate):
         employee_id=new_user.employee_id
     )
 
-# 🆕 ✅ Login route
+# Login route
 @router.post("/login")
 async def login_user(credentials: UserLogin):
     user = await User.find_one(User.employee_id == credentials.employee_id)
@@ -41,7 +41,7 @@ async def login_user(credentials: UserLogin):
         "employee_id": user.employee_id
     }
 
-# ✅ Manager: View all team members with feedback stats
+# Manager: View all team members with feedback stats
 @router.get("/dashboard/manager", response_model=List[dict])
 async def manager_dashboard():
     employees = await User.find(User.role == "employee").to_list()
@@ -61,7 +61,7 @@ async def manager_dashboard():
 
     return result
 
-# ✅ Employee: View timeline of received feedback
+# Employee: View timeline of received feedback
 @router.get("/dashboard/employee/{employee_id}", response_model=List[dict])
 async def employee_dashboard(employee_id: str):
     user = await User.find_one(User.employee_id == employee_id)
@@ -84,7 +84,7 @@ async def employee_dashboard(employee_id: str):
         })
     return timeline
 
-# ✅ Update employee
+# Update employee
 @router.put("/{employee_id}", response_model=UserOut)
 async def update_user(employee_id: str, updated_data: UserCreate):
     user = await User.find_one(User.employee_id == employee_id)
@@ -105,7 +105,7 @@ async def update_user(employee_id: str, updated_data: UserCreate):
         employee_id=user.employee_id
     )
 
-# ✅ Delete employee
+# Delete employee
 @router.delete("/{employee_id}")
 async def delete_user(employee_id: str):
     user = await User.find_one(User.employee_id == employee_id)
