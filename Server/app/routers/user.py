@@ -10,9 +10,9 @@ router = APIRouter()
 # Register a new user (Manager only)
 @router.post("/", response_model=UserOut)
 async def create_user(user: UserCreate):
-    manager = await User.find_one(User.role == "manager")
-    if not manager:
-        raise HTTPException(status_code=403, detail="Only manager can register employees")
+    # manager = await User.find_one(User.role == "manager")
+    # if not manager:
+    #     raise HTTPException(status_code=403, detail="Only manager can register employees")
 
     existing = await User.find_one(User.employee_id == user.employee_id)
     if existing:
