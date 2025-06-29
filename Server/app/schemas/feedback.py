@@ -3,12 +3,14 @@ from typing import Literal, List, Optional
 from datetime import datetime
 
 class FeedbackCreate(BaseModel):
+    manager_employee_id: str
     employee_id: str
     strengths: str
     improvement: str
-    sentiment: Literal["positive", "neutral", "negative"]
-    anonymous: bool = False
+    sentiment: str
+    anonymous: Optional[bool] = False
     tags: Optional[List[str]] = []
+
 
 class CommentIn(BaseModel):
     employee_id: str

@@ -18,9 +18,12 @@ router = APIRouter()
 # Give Feedback (Manager)
 @router.post("/", response_model=FeedbackOut)
 async def give_feedback(feedback: FeedbackCreate):
-    manager = await User.find_one(User.role == "manager")
+    manager = await User.find_one(
+        User.employee_id == feedback.manager_employee_id,
+        User.role == "manager"
+    )
     if not manager:
-        raise HTTPException(403, "Only managers can give feedback")
+        raise HTTPException(403, "Manager not found")
 
     employee = await User.find_one(User.employee_id == feedback.employee_id)
     if not employee:
@@ -46,6 +49,7 @@ async def give_feedback(feedback: FeedbackCreate):
     ).insert()
 
     return FeedbackOut.from_feedback(fb, manager.name)
+
 
 # View Feedback History (Employee)
 @router.get("/employee/{employee_id}", response_model=List[FeedbackOut])
@@ -184,3 +188,32 @@ async def export_pdf(employee_id: str):
     p.save()
     buf.seek(0)
     return StreamingResponse(buf, media_type="application/pdf")
+
+
+
+# View Feedback History (Manager)
+@router.get("/manager/{manager_id}", response_model=List[FeedbackOut])
+async def get_manager_feedback_history(manager_id: str):
+    # Check that the user is a manager
+    mgr = await User.find_one(User.employee_id == manager_id, User.role == "manager")
+    if not mgr:
+        raise HTTPException(404, "Manager not found")
+
+    # Find all feedback given by this manager
+    fbs = await Feedback.find(Feedback.manager_id == manager_id).to_list()
+    out = []
+    for fb in fbs:
+        employee = await User.find_one(User.employee_id == fb.employee_id)
+        comments_html = [
+            {"employee_id": c["employee_id"], "text": markdown2.markdown(c["text"])}
+            for c in getattr(fb, "comments", [])
+        ]
+        out.append(
+            FeedbackOut.from_feedback(
+                fb,
+                mgr.name,
+                comments_html
+            )
+        )
+    return out
+
