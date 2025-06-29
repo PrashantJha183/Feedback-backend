@@ -15,12 +15,13 @@ from fastapi.responses import StreamingResponse
 
 router = APIRouter()
 
-
-# NEW: Create feedback (manager giving feedback to employee)
+# -----------------------------
+# Create Feedback (Manager to Employee)
+# -----------------------------
 @router.post("/", response_model=FeedbackOut)
 async def create_feedback(payload: FeedbackCreate):
     mgr = await User.find_one(
-        User.employee_id == payload.manager_id,
+        User.employee_id == payload.manager_employee_id,
         User.role == "manager"
     )
     if not mgr:
@@ -35,10 +36,11 @@ async def create_feedback(payload: FeedbackCreate):
 
     fb = Feedback(
         employee_id=payload.employee_id,
-        manager_id=payload.manager_id,
+        manager_id=payload.manager_employee_id,
         strengths=payload.strengths,
         improvement=payload.improvement,
         sentiment=payload.sentiment,
+        anonymous=payload.anonymous,
         tags=payload.tags or [],
         acknowledged=False,
         comments=[],
@@ -46,7 +48,6 @@ async def create_feedback(payload: FeedbackCreate):
     )
     await fb.insert()
 
-    # Optional: create notification for the employee
     await Notification(
         employee_id=payload.employee_id,
         message=f"You have received new feedback from manager {mgr.name}"
@@ -55,7 +56,9 @@ async def create_feedback(payload: FeedbackCreate):
     return FeedbackOut.from_feedback(fb, mgr.name)
 
 
+# -----------------------------
 # Employee Requests Feedback
+# -----------------------------
 @router.post("/request")
 async def request_feedback(payload: FeedbackRequestIn):
     emp = await User.find_one(
@@ -64,7 +67,7 @@ async def request_feedback(payload: FeedbackRequestIn):
     )
     if not emp:
         raise HTTPException(404, "Employee not found")
-    
+
     mgr = await User.find_one(
         User.employee_id == payload.manager_employee_id,
         User.role == "manager"
@@ -89,7 +92,9 @@ async def request_feedback(payload: FeedbackRequestIn):
     return {"message": "Feedback request submitted successfully"}
 
 
-# NEW: Get all feedback requests for a manager
+# -----------------------------
+# Get All Feedback Requests for Manager
+# -----------------------------
 @router.get("/requests/{manager_id}")
 async def get_feedback_requests(manager_id: str):
     mgr = await User.find_one(
@@ -115,7 +120,9 @@ async def get_feedback_requests(manager_id: str):
     ]
 
 
-# NEW: Mark a feedback request as seen
+# -----------------------------
+# Mark Feedback Request as Seen
+# -----------------------------
 @router.patch("/requests/{request_id}/seen")
 async def mark_feedback_request_seen(request_id: str):
     req = await FeedbackRequest.get(request_id)
@@ -127,7 +134,9 @@ async def mark_feedback_request_seen(request_id: str):
     return {"message": "Feedback request marked as seen"}
 
 
-# NEW: Count unseen requests for manager
+# -----------------------------
+# Count Unseen Requests for Manager
+# -----------------------------
 @router.get("/requests/{manager_id}/count-unseen")
 async def count_unseen_requests(manager_id: str):
     mgr = await User.find_one(
@@ -144,7 +153,10 @@ async def count_unseen_requests(manager_id: str):
 
     return {"unseen_count": count}
 
+
+# -----------------------------
 # View Feedback History (Employee)
+# -----------------------------
 @router.get("/employee/{employee_id}", response_model=List[FeedbackOut])
 async def get_feedback_history(employee_id: str):
     fbs = await Feedback.find(Feedback.employee_id == employee_id).to_list()
@@ -158,24 +170,34 @@ async def get_feedback_history(employee_id: str):
         out.append(FeedbackOut.from_feedback(fb, mgr.name if mgr else "Unknown", comments_html))
     return out
 
+
+# -----------------------------
 # Acknowledge Feedback
+# -----------------------------
 @router.patch("/acknowledge/{feedback_id}")
 async def acknowledge(feedback_id: str):
     fb = await Feedback.get(feedback_id)
     if not fb:
         raise HTTPException(404, "Feedback not found")
+
     fb.acknowledged = True
     await fb.save()
     return {"message": "Feedback acknowledged"}
 
+
+# -----------------------------
 # Update Feedback (Manager only)
+# -----------------------------
 @router.put("/{feedback_id}", response_model=FeedbackOut)
 async def update_feedback(feedback_id: str, upd: FeedbackCreate):
     fb = await Feedback.get(feedback_id)
     if not fb:
         raise HTTPException(404, "Feedback not found")
 
-    mgr = await User.find_one(User.role == "manager")
+    mgr = await User.find_one(
+        User.employee_id == upd.manager_employee_id,
+        User.role == "manager"
+    )
     if not mgr or fb.manager_id != mgr.employee_id:
         raise HTTPException(403, "Not authorized")
 
@@ -183,26 +205,33 @@ async def update_feedback(feedback_id: str, upd: FeedbackCreate):
     fb.improvement = upd.improvement
     fb.sentiment = upd.sentiment
     fb.tags = upd.tags or []
+    fb.anonymous = upd.anonymous
     await fb.save()
 
     employee = await User.find_one(User.employee_id == fb.employee_id)
     return FeedbackOut.from_feedback(fb, mgr.name)
 
+
+# -----------------------------
 # Delete Feedback
+# -----------------------------
 @router.delete("/{feedback_id}")
 async def delete_feedback(feedback_id: str):
     fb = await Feedback.get(feedback_id)
     if not fb:
         raise HTTPException(404, "Feedback not found")
 
-    mgr = await User.find_one(User.role == "manager")
-    if fb.manager_id != mgr.employee_id:
+    mgr = await User.find_one(User.employee_id == fb.manager_id, User.role == "manager")
+    if not mgr:
         raise HTTPException(403, "Not authorized")
 
     await fb.delete()
     return {"message": "Deleted"}
 
+
+# -----------------------------
 # Delete All Feedback by Manager
+# -----------------------------
 @router.delete("/manager/{manager_id}")
 async def delete_all(manager_id: str):
     mgr = await User.find_one(User.employee_id == manager_id, User.role == "manager")
@@ -212,43 +241,10 @@ async def delete_all(manager_id: str):
     deleted = await Feedback.find(Feedback.manager_id == manager_id).delete()
     return {"message": f"Deleted {deleted} items"}
 
-# Employee Requests Feedback
-@router.post("/request")
-async def request_feedback(payload: FeedbackRequestIn):
-    # Check that the employee exists and has role 'employee'
-    emp = await User.find_one(
-        User.employee_id == payload.employee_id,
-        User.role == "employee"
-    )
-    if not emp:
-        raise HTTPException(404, "Employee not found")
-    
-    # Check that the manager exists and has role 'manager'
-    mgr = await User.find_one(
-        User.employee_id == payload.manager_employee_id,
-        User.role == "manager"
-    )
-    if not mgr:
-        raise HTTPException(404, "Manager not found")
 
-    # Save the feedback request
-    fr = FeedbackRequest(
-        employee_id=payload.employee_id,
-        manager_employee_id=payload.manager_employee_id,
-        message=payload.message
-    )
-    await fr.insert()
-
-    # Create a notification for the manager
-    await Notification(
-        employee_id=payload.manager_employee_id,
-        message=f"Feedback request from employee {payload.employee_id}"
-    ).insert()
-
-    return {"message": "Feedback request submitted successfully"}
-
-
+# -----------------------------
 # Add Comment to Feedback
+# -----------------------------
 @router.post("/comment/{feedback_id}")
 async def comment(feedback_id: str, comment: CommentIn):
     fb = await Feedback.get(feedback_id)
@@ -264,7 +260,10 @@ async def comment(feedback_id: str, comment: CommentIn):
     await fb.save()
     return {"message": "Comment added"}
 
+
+# -----------------------------
 # Export Feedback as PDF
+# -----------------------------
 @router.get("/export/{employee_id}", response_model=ExportPDFResponse)
 async def export_pdf(employee_id: str):
     fbs = await Feedback.find(Feedback.employee_id == employee_id).to_list()
@@ -283,16 +282,15 @@ async def export_pdf(employee_id: str):
     return StreamingResponse(buf, media_type="application/pdf")
 
 
-
+# -----------------------------
 # View Feedback History (Manager)
+# -----------------------------
 @router.get("/manager/{manager_id}", response_model=List[FeedbackOut])
 async def get_manager_feedback_history(manager_id: str):
-    # Check that the user is a manager
     mgr = await User.find_one(User.employee_id == manager_id, User.role == "manager")
     if not mgr:
         raise HTTPException(404, "Manager not found")
 
-    # Find all feedback given by this manager
     fbs = await Feedback.find(Feedback.manager_id == manager_id).to_list()
     out = []
     for fb in fbs:
@@ -309,4 +307,3 @@ async def get_manager_feedback_history(manager_id: str):
             )
         )
     return out
-
