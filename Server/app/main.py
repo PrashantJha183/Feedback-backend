@@ -20,6 +20,8 @@ app.add_middleware(
        "http://feedback-2uwd.onrender.com",
        "https://feedback-frontend-git-main-prashantjha183s-projects.vercel.app/",
        "https://feedback-frontend-three.vercel.app/"
+       "https://voxpop.netlify.app/",
+       "http://voxpop.netlify.app/"
     ],
     allow_credentials=True,
     allow_methods=["*"],
