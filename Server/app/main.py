@@ -29,6 +29,7 @@ app.add_middleware(
 )
 
 
+
 # Root route
 @app.get("/")
 def root():

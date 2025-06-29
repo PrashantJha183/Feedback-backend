@@ -128,10 +128,10 @@ async def employee_dashboard(employee_id: str):
     feedbacks = await Feedback.find(Feedback.employee_id == employee_id).sort("-created_at").to_list()
     timeline = []
     for fb in feedbacks:
-        manager = await User.find_one(User.employee_id == fb.manager_id)
+        manager = await User.find_one(User.employee_id == fb.manager_employee_id)
         timeline.append({
             "feedback_id": str(fb.id),
-            "manager_id": fb.manager_id,
+            "manager_id": fb.manager_employee_id,
             "manager_name": manager.name if manager else "Unknown",
             "strengths": fb.strengths,
             "improvement": fb.improvement,
