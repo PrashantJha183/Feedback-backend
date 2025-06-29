@@ -1,6 +1,5 @@
 from pydantic import BaseModel, EmailStr
-from typing import Literal
-
+from typing import Optional, Literal
 
 class UserCreate(BaseModel):
     name: str
@@ -9,23 +8,20 @@ class UserCreate(BaseModel):
     role: Literal["manager", "employee"]
     employee_id: str
 
-
 class UserOut(BaseModel):
     name: str
     email: EmailStr
     role: Literal["manager", "employee"]
     employee_id: str
-
+    manager_employee_id: Optional[str] = None
 
 class UserLogin(BaseModel):
     employee_id: str
     password: str
 
-
 class PasswordUpdate(BaseModel):
     old_password: str
     new_password: str
-
 
 class PasswordReset(BaseModel):
     employee_id: str

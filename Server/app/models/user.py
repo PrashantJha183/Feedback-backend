@@ -1,6 +1,6 @@
 from beanie import Document
-from pydantic import EmailStr
-from typing import Literal
+from pydantic import BaseModel, EmailStr, Field
+from typing import Literal, Optional
 from pydantic import ConfigDict
 
 class User(Document):
@@ -8,9 +8,10 @@ class User(Document):
     email: EmailStr
     password: str
     role: Literal["manager", "employee"]
-    employee_id: str  
+    employee_id: str
+    manager_employee_id: Optional[str] = None
 
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     class Settings:
-        name = "users"  #Beanie collection name
+        name = "users"  # Beanie collection name

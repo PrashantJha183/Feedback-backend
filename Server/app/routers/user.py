@@ -34,15 +34,24 @@ async def create_user(
         raise HTTPException(status_code=400, detail="Employee ID already exists")
 
     hashed_password = pwd_context.hash(user.password)
+
     new_user = User(**user.dict())
     new_user.password = hashed_password
+
+    # assign the manager_employee_id if the user is an employee
+    if new_user.role == "employee":
+        new_user.manager_employee_id = manager_id
+    else:
+        new_user.manager_employee_id = None
+
     await new_user.insert()
 
     return UserOut(
         name=new_user.name,
         email=new_user.email,
         role=new_user.role,
-        employee_id=new_user.employee_id
+        employee_id=new_user.employee_id,
+        manager_employee_id=new_user.manager_employee_id
     )
 
 
@@ -60,7 +69,8 @@ async def login_user(credentials: UserLogin):
         "name": user.name,
         "email": user.email,
         "role": user.role,
-        "employee_id": user.employee_id
+        "employee_id": user.employee_id,
+        "manager_employee_id": user.manager_employee_id
     }
 
 
@@ -114,6 +124,33 @@ async def employee_dashboard(employee_id: str):
 
 
 # -------------------------------
+# Fetch employees under a manager
+# -------------------------------
+@router.get("/manager/{manager_id}/employees", response_model=List[UserOut])
+async def get_employees_under_manager(manager_id: str):
+    # Check manager exists
+    manager = await User.find_one(
+        User.employee_id == manager_id, User.role == "manager"
+    )
+    if not manager:
+        raise HTTPException(status_code=404, detail="Manager not found")
+
+    # Find all employees under this manager
+    employees = await User.find(
+        User.manager_employee_id == manager_id
+    ).to_list()
+
+    return [
+        UserOut(
+            name=emp.name,
+            email=emp.email,
+            role=emp.role,
+            employee_id=emp.employee_id,
+        )
+        for emp in employees
+    ]
+
+# -------------------------------
 # Update user (Manager only)
 # -------------------------------
 @router.put("/{employee_id}", response_model=UserOut)
@@ -137,13 +174,21 @@ async def update_user(employee_id: str, updated_data: UserCreate, manager_id: st
     user.email = updated_data.email
     user.password = hashed_password
     user.role = updated_data.role
+
+    # update manager_employee_id if the user is an employee
+    if user.role == "employee":
+        user.manager_employee_id = manager_id
+    else:
+        user.manager_employee_id = None
+
     await user.save()
 
     return UserOut(
         name=user.name,
         email=user.email,
         role=user.role,
-        employee_id=user.employee_id
+        employee_id=user.employee_id,
+        manager_employee_id=user.manager_employee_id
     )
 
 
