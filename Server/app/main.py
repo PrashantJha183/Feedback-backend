@@ -17,7 +17,8 @@ app.add_middleware(
        "http://localhost:3000",
        "https://127.0.0.1:3000",
        "https://feedback-2uwd.onrender.com", 
-       "http://feedback-2uwd.onrender.com"
+       "http://feedback-2uwd.onrender.com",
+       "https://feedback-frontend-git-main-prashantjha183s-projects.vercel.app/"
     ],
     allow_credentials=True,
     allow_methods=["*"],
