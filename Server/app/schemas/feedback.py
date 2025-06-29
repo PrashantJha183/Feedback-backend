@@ -11,11 +11,9 @@ class FeedbackCreate(BaseModel):
     anonymous: Optional[bool] = False
     tags: Optional[List[str]] = []
 
-
 class CommentIn(BaseModel):
     employee_id: str
     text: str
-
 
 class FeedbackRequestIn(BaseModel):
     employee_id: str
@@ -24,7 +22,7 @@ class FeedbackRequestIn(BaseModel):
 
 class FeedbackOut(BaseModel):
     id: str
-    manager_id: str
+    manager_employee_id: str
     manager_name: str
     employee_id: str
     strengths: str
@@ -40,7 +38,7 @@ class FeedbackOut(BaseModel):
     def from_feedback(cls, fb, manager_name, comments_html=None):
         return cls(
             id=str(fb.id),
-            manager_id=fb.manager_id,
+            manager_employee_id=fb.manager_employee_id,
             manager_name=manager_name,
             employee_id=fb.employee_id,
             strengths=fb.strengths,

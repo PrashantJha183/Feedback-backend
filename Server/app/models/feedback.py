@@ -4,7 +4,7 @@ from datetime import datetime
 from pydantic import ConfigDict
 
 class Feedback(Document):
-    manager_id: str
+    manager_employee_id: str
     employee_id: str
     strengths: str
     improvement: str

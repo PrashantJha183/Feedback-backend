@@ -77,14 +77,31 @@ async def login_user(credentials: UserLogin):
 # -------------------------------
 # Manager Dashboard
 # -------------------------------
-@router.get("/dashboard/manager", response_model=List[dict])
-async def manager_dashboard():
-    employees = await User.find(User.role == "employee").to_list()
+@router.get("/dashboard/manager/{manager_id}", response_model=List[dict])
+async def manager_dashboard(manager_id: str):
+    """
+    Return a dashboard summary for the given manager,
+    showing each employee under them plus feedback sentiment counts.
+    """
+
+    employees = await User.find(
+        User.role == "employee",
+        User.manager_employee_id == manager_id
+    ).to_list()
+
+    if not employees:
+        return []
+
     result = []
 
     for emp in employees:
-        feedbacks = await Feedback.find(Feedback.employee_id == emp.employee_id).to_list()
+        feedbacks = await Feedback.find(
+            Feedback.employee_id == emp.employee_id,
+            Feedback.manager_employee_id == manager_id
+        ).to_list()
+
         sentiments = Counter([fb.sentiment for fb in feedbacks])
+
         result.append({
             "employee_id": emp.employee_id,
             "employee_name": emp.name,
@@ -95,6 +112,8 @@ async def manager_dashboard():
         })
 
     return result
+
+
 
 
 # -------------------------------

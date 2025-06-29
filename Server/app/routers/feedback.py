@@ -36,7 +36,7 @@ async def create_feedback(payload: FeedbackCreate):
 
     fb = Feedback(
         employee_id=payload.employee_id,
-        manager_id=payload.manager_employee_id,
+        manager_employee_id=payload.manager_employee_id,
         strengths=payload.strengths,
         improvement=payload.improvement,
         sentiment=payload.sentiment,
@@ -162,12 +162,16 @@ async def get_feedback_history(employee_id: str):
     fbs = await Feedback.find(Feedback.employee_id == employee_id).to_list()
     out = []
     for fb in fbs:
-        mgr = await User.find_one(User.employee_id == fb.manager_id)
+        mgr = await User.find_one(User.employee_id == fb.manager_employee_id)
         comments_html = [
             {"employee_id": c["employee_id"], "text": markdown2.markdown(c["text"])}
             for c in getattr(fb, "comments", [])
         ]
-        out.append(FeedbackOut.from_feedback(fb, mgr.name if mgr else "Unknown", comments_html))
+        out.append(FeedbackOut.from_feedback(
+            fb,
+            mgr.name if mgr else "Unknown",
+            comments_html
+        ))
     return out
 
 
@@ -198,7 +202,7 @@ async def update_feedback(feedback_id: str, upd: FeedbackCreate):
         User.employee_id == upd.manager_employee_id,
         User.role == "manager"
     )
-    if not mgr or fb.manager_id != mgr.employee_id:
+    if not mgr or fb.manager_employee_id != mgr.employee_id:
         raise HTTPException(403, "Not authorized")
 
     fb.strengths = upd.strengths
@@ -208,7 +212,6 @@ async def update_feedback(feedback_id: str, upd: FeedbackCreate):
     fb.anonymous = upd.anonymous
     await fb.save()
 
-    employee = await User.find_one(User.employee_id == fb.employee_id)
     return FeedbackOut.from_feedback(fb, mgr.name)
 
 
@@ -221,7 +224,10 @@ async def delete_feedback(feedback_id: str):
     if not fb:
         raise HTTPException(404, "Feedback not found")
 
-    mgr = await User.find_one(User.employee_id == fb.manager_id, User.role == "manager")
+    mgr = await User.find_one(
+        User.employee_id == fb.manager_employee_id,
+        User.role == "manager"
+    )
     if not mgr:
         raise HTTPException(403, "Not authorized")
 
@@ -234,11 +240,16 @@ async def delete_feedback(feedback_id: str):
 # -----------------------------
 @router.delete("/manager/{manager_id}")
 async def delete_all(manager_id: str):
-    mgr = await User.find_one(User.employee_id == manager_id, User.role == "manager")
+    mgr = await User.find_one(
+        User.employee_id == manager_id,
+        User.role == "manager"
+    )
     if not mgr:
         raise HTTPException(403, "Not authorized")
 
-    deleted = await Feedback.find(Feedback.manager_id == manager_id).delete()
+    deleted = await Feedback.find(
+        Feedback.manager_employee_id == manager_id
+    ).delete()
     return {"message": f"Deleted {deleted} items"}
 
 
@@ -256,7 +267,10 @@ async def comment(feedback_id: str, comment: CommentIn):
         raise HTTPException(403, "Not authorized")
 
     fb.comments = getattr(fb, "comments", [])
-    fb.comments.append({"employee_id": comment.employee_id, "text": comment.text})
+    fb.comments.append({
+        "employee_id": comment.employee_id,
+        "text": comment.text
+    })
     await fb.save()
     return {"message": "Comment added"}
 
@@ -272,7 +286,11 @@ async def export_pdf(employee_id: str):
     p.drawString(100, 800, f"Feedback Report for Employee ID: {employee_id}")
     y = 780
     for fb in fbs:
-        p.drawString(100, y, f"{fb.sentiment.upper()} - {fb.strengths} | {fb.improvement}")
+        p.drawString(
+            100,
+            y,
+            f"{fb.sentiment.upper()} - {fb.strengths} | {fb.improvement}"
+        )
         y -= 20
         if y < 50:
             p.showPage()
@@ -287,11 +305,17 @@ async def export_pdf(employee_id: str):
 # -----------------------------
 @router.get("/manager/{manager_id}", response_model=List[FeedbackOut])
 async def get_manager_feedback_history(manager_id: str):
-    mgr = await User.find_one(User.employee_id == manager_id, User.role == "manager")
+    mgr = await User.find_one(
+        User.employee_id == manager_id,
+        User.role == "manager"
+    )
     if not mgr:
         raise HTTPException(404, "Manager not found")
 
-    fbs = await Feedback.find(Feedback.manager_id == manager_id).to_list()
+    fbs = await Feedback.find(
+        Feedback.manager_employee_id == manager_id
+    ).to_list()
+
     out = []
     for fb in fbs:
         employee = await User.find_one(User.employee_id == fb.employee_id)

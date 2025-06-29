@@ -7,7 +7,6 @@ class UserCreate(BaseModel):
     password: str
     role: Literal["manager", "employee"]
     employee_id: str
-    # NEW FIELD:
     manager_employee_id: Optional[str] = None
     """
     Required if creating an employee.
