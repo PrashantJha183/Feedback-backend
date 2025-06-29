@@ -15,41 +15,94 @@ from fastapi.responses import StreamingResponse
 
 router = APIRouter()
 
-# Give Feedback (Manager)
-@router.post("/", response_model=FeedbackOut)
-async def give_feedback(feedback: FeedbackCreate):
-    manager = await User.find_one(
-        User.employee_id == feedback.manager_employee_id,
+# Employee Requests Feedback
+@router.post("/request")
+async def request_feedback(payload: FeedbackRequestIn):
+    emp = await User.find_one(
+        User.employee_id == payload.employee_id,
+        User.role == "employee"
+    )
+    if not emp:
+        raise HTTPException(404, "Employee not found")
+    
+    mgr = await User.find_one(
+        User.employee_id == payload.manager_employee_id,
         User.role == "manager"
     )
-    if not manager:
-        raise HTTPException(403, "Manager not found")
+    if not mgr:
+        raise HTTPException(404, "Manager not found")
 
-    employee = await User.find_one(User.employee_id == feedback.employee_id)
-    if not employee:
-        raise HTTPException(404, "Employee not found")
-
-    fb = Feedback(
-        manager_id=manager.employee_id,
-        employee_id=employee.employee_id,
-        strengths=feedback.strengths,
-        improvement=feedback.improvement,
-        sentiment=feedback.sentiment,
-        anonymous=feedback.anonymous or False,
-        tags=feedback.tags or [],
-        comments=[],
-        acknowledged=False,
+    fr = FeedbackRequest(
+        employee_id=payload.employee_id,
+        manager_employee_id=payload.manager_employee_id,
+        message=payload.message,
+        seen=False,
         created_at=datetime.utcnow()
     )
-    await fb.insert()
+    await fr.insert()
 
     await Notification(
-        employee_id=employee.employee_id,
-        message="New feedback received"
+        employee_id=payload.manager_employee_id,
+        message=f"Feedback request from employee {payload.employee_id}"
     ).insert()
 
-    return FeedbackOut.from_feedback(fb, manager.name)
+    return {"message": "Feedback request submitted successfully"}
 
+
+# NEW: Get all feedback requests for a manager
+@router.get("/requests/{manager_id}")
+async def get_feedback_requests(manager_id: str):
+    mgr = await User.find_one(
+        User.employee_id == manager_id,
+        User.role == "manager"
+    )
+    if not mgr:
+        raise HTTPException(404, "Manager not found")
+
+    requests = await FeedbackRequest.find(
+        FeedbackRequest.manager_employee_id == manager_id
+    ).sort("-created_at").to_list()
+
+    return [
+        {
+            "id": str(req.id),
+            "employee_id": req.employee_id,
+            "message": req.message,
+            "seen": req.seen,
+            "created_at": req.created_at
+        }
+        for req in requests
+    ]
+
+
+# NEW: Mark a feedback request as seen
+@router.patch("/requests/{request_id}/seen")
+async def mark_feedback_request_seen(request_id: str):
+    req = await FeedbackRequest.get(request_id)
+    if not req:
+        raise HTTPException(404, "Feedback request not found")
+
+    req.seen = True
+    await req.save()
+    return {"message": "Feedback request marked as seen"}
+
+
+# NEW: Count unseen requests for manager
+@router.get("/requests/{manager_id}/count-unseen")
+async def count_unseen_requests(manager_id: str):
+    mgr = await User.find_one(
+        User.employee_id == manager_id,
+        User.role == "manager"
+    )
+    if not mgr:
+        raise HTTPException(404, "Manager not found")
+
+    count = await FeedbackRequest.find(
+        FeedbackRequest.manager_employee_id == manager_id,
+        FeedbackRequest.seen == False
+    ).count()
+
+    return {"unseen_count": count}
 
 # View Feedback History (Employee)
 @router.get("/employee/{employee_id}", response_model=List[FeedbackOut])
