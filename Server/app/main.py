@@ -9,11 +9,15 @@ app = FastAPI(title="Feedback Tool")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost",
-        "http://localhost:5173",
-        "https://127.0.0.1:5173",
-        "http://localhost:3000",
-        "https://127.0.0.1:3000"
+       "http://localhost",
+       "http://localhost:5173",
+       "https://localhost:5173",
+       "http://127.0.0.1:5173",
+       "https://127.0.0.1:5173",
+       "http://localhost:3000",
+       "https://127.0.0.1:3000",
+       "https://feedback-2uwd.onrender.com", 
+       "http://feedback-2uwd.onrender.com"
     ],
     allow_credentials=True,
     allow_methods=["*"],
