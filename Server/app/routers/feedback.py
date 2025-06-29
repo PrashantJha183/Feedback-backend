@@ -50,6 +50,8 @@ async def create_feedback(payload: FeedbackCreate):
 
     await Notification(
         employee_id=payload.employee_id,
+        manager_employee_id=mgr.employee_id,
+        manager_name=mgr.name,
         message=f"You have received new feedback from manager {mgr.name}"
     ).insert()
 
@@ -86,6 +88,8 @@ async def request_feedback(payload: FeedbackRequestIn):
 
     await Notification(
         employee_id=payload.manager_employee_id,
+        manager_employee_id=payload.manager_employee_id,
+        manager_name=mgr.name,
         message=f"Feedback request from employee {payload.employee_id}"
     ).insert()
 
@@ -186,6 +190,16 @@ async def acknowledge(feedback_id: str):
 
     fb.acknowledged = True
     await fb.save()
+
+    mgr = await User.find_one(User.employee_id == fb.manager_employee_id)
+    if mgr:
+        await Notification(
+            employee_id=fb.manager_employee_id,
+            manager_employee_id=fb.manager_employee_id,
+            manager_name=mgr.name,
+            message=f"Employee {fb.employee_id} acknowledged your feedback."
+        ).insert()
+
     return {"message": "Feedback acknowledged"}
 
 
@@ -272,6 +286,16 @@ async def comment(feedback_id: str, comment: CommentIn):
         "text": comment.text
     })
     await fb.save()
+
+    mgr = await User.find_one(User.employee_id == fb.manager_employee_id)
+    if mgr:
+        await Notification(
+            employee_id=fb.manager_employee_id,
+            manager_employee_id=fb.manager_employee_id,
+            manager_name=mgr.name,
+            message=f"Employee {comment.employee_id} commented on your feedback."
+        ).insert()
+
     return {"message": "Comment added"}
 
 
@@ -318,7 +342,6 @@ async def get_manager_feedback_history(manager_id: str):
 
     out = []
     for fb in fbs:
-        employee = await User.find_one(User.employee_id == fb.employee_id)
         comments_html = [
             {"employee_id": c["employee_id"], "text": markdown2.markdown(c["text"])}
             for c in getattr(fb, "comments", [])
@@ -331,3 +354,43 @@ async def get_manager_feedback_history(manager_id: str):
             )
         )
     return out
+
+
+# -------------------------------
+# Notifications
+# -------------------------------
+@router.get("/notifications/{employee_id}")
+async def get_notifications(employee_id: str):
+    notifs = await Notification.find(
+        Notification.employee_id == employee_id
+    ).sort(-Notification.created_at).to_list()
+    return [
+        {
+            "id": str(n.id),
+            "employee_id": n.employee_id,
+            "manager_employee_id": n.manager_employee_id,
+            "manager_name": n.manager_name,
+            "message": n.message,
+            "seen": n.seen,
+            "created_at": n.created_at,
+        }
+        for n in notifs
+    ]
+
+
+@router.patch("/notifications/{notification_id}")
+async def update_notification_seen(notification_id: str, seen: bool):
+    notif = await Notification.get(notification_id)
+    if not notif:
+        raise HTTPException(404, "Notification not found")
+    notif.seen = seen
+    await notif.save()
+    return {"message": "Notification updated"}
+
+
+@router.patch("/notifications/mark-all-seen/{employee_id}")
+async def mark_all_seen(employee_id: str):
+    await Notification.find(
+        Notification.employee_id == employee_id
+    ).update_many({"$set": {"seen": True}})
+    return {"message": "All notifications marked as seen"}
