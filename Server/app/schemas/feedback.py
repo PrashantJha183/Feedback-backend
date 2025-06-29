@@ -17,6 +17,7 @@ class CommentIn(BaseModel):
 
 class FeedbackRequestIn(BaseModel):
     employee_id: str
+    manager_employee_id: str
     message: str
 
 class FeedbackOut(BaseModel):

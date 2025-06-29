@@ -118,19 +118,38 @@ async def delete_all(manager_id: str):
 # Employee Requests Feedback
 @router.post("/request")
 async def request_feedback(payload: FeedbackRequestIn):
-    emp = await User.find_one(User.employee_id == payload.employee_id, User.role == "employee")
+    # Check that the employee exists and has role 'employee'
+    emp = await User.find_one(
+        User.employee_id == payload.employee_id,
+        User.role == "employee"
+    )
     if not emp:
         raise HTTPException(404, "Employee not found")
     
-    fr = FeedbackRequest(employee_id=payload.employee_id, message=payload.message)
+    # Check that the manager exists and has role 'manager'
+    mgr = await User.find_one(
+        User.employee_id == payload.manager_employee_id,
+        User.role == "manager"
+    )
+    if not mgr:
+        raise HTTPException(404, "Manager not found")
+
+    # Save the feedback request
+    fr = FeedbackRequest(
+        employee_id=payload.employee_id,
+        manager_employee_id=payload.manager_employee_id,
+        message=payload.message
+    )
     await fr.insert()
 
+    # Create a notification for the manager
     await Notification(
-        user_id=payload.employee_id,
-        message="You requested feedback. Await manager response."
+        employee_id=payload.manager_employee_id,
+        message=f"Feedback request from employee {payload.employee_id}"
     ).insert()
 
-    return {"message": "Request submitted"}
+    return {"message": "Feedback request submitted successfully"}
+
 
 # Add Comment to Feedback
 @router.post("/comment/{feedback_id}")
