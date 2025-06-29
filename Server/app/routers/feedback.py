@@ -41,7 +41,7 @@ async def give_feedback(feedback: FeedbackCreate):
     await fb.insert()
 
     await Notification(
-        user_id=employee.employee_id,
+        employee_id=employee.employee_id,
         message="New feedback received"
     ).insert()
 
