@@ -15,6 +15,46 @@ from fastapi.responses import StreamingResponse
 
 router = APIRouter()
 
+
+# NEW: Create feedback (manager giving feedback to employee)
+@router.post("/", response_model=FeedbackOut)
+async def create_feedback(payload: FeedbackCreate):
+    mgr = await User.find_one(
+        User.employee_id == payload.manager_id,
+        User.role == "manager"
+    )
+    if not mgr:
+        raise HTTPException(404, "Manager not found")
+
+    employee = await User.find_one(
+        User.employee_id == payload.employee_id,
+        User.role == "employee"
+    )
+    if not employee:
+        raise HTTPException(404, "Employee not found")
+
+    fb = Feedback(
+        employee_id=payload.employee_id,
+        manager_id=payload.manager_id,
+        strengths=payload.strengths,
+        improvement=payload.improvement,
+        sentiment=payload.sentiment,
+        tags=payload.tags or [],
+        acknowledged=False,
+        comments=[],
+        created_at=datetime.utcnow()
+    )
+    await fb.insert()
+
+    # Optional: create notification for the employee
+    await Notification(
+        employee_id=payload.employee_id,
+        message=f"You have received new feedback from manager {mgr.name}"
+    ).insert()
+
+    return FeedbackOut.from_feedback(fb, mgr.name)
+
+
 # Employee Requests Feedback
 @router.post("/request")
 async def request_feedback(payload: FeedbackRequestIn):
