@@ -15,7 +15,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # -------------------------------
 @router.post("/", response_model=UserOut)
 async def create_user(user: UserCreate):
-    # Check if employee_id already exists
     existing = await User.find_one(User.employee_id == user.employee_id)
     if existing:
         raise HTTPException(status_code=400, detail="Employee ID already exists.")
@@ -23,8 +22,7 @@ async def create_user(user: UserCreate):
     if user.role == "employee":
         if not user.manager_employee_id:
             raise HTTPException(status_code=400, detail="manager_employee_id required for employees.")
-        
-        # Check if manager exists
+
         manager = await User.find_one(User.employee_id == user.manager_employee_id)
         if not manager or manager.role != "manager":
             raise HTTPException(status_code=404, detail="Manager not found.")
@@ -124,3 +122,28 @@ async def employee_dashboard(employee_id: str):
         })
 
     return timeline
+
+
+# -------------------------------
+# Get employees under a manager
+# -------------------------------
+@router.get("/manager/{manager_id}/employees", response_model=List[UserOut])
+async def get_employees_under_manager(manager_id: str):
+    manager = await User.find_one(User.employee_id == manager_id)
+    if not manager or manager.role != "manager":
+        raise HTTPException(status_code=404, detail="Manager not found.")
+
+    employees = await User.find(
+        User.manager_employee_id == manager_id
+    ).to_list()
+
+    return [
+        UserOut(
+            name=emp.name,
+            email=emp.email,
+            role=emp.role,
+            employee_id=emp.employee_id,
+            manager_employee_id=emp.manager_employee_id
+        )
+        for emp in employees
+    ]
