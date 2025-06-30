@@ -217,7 +217,7 @@ async def update_employee(manager_id: str, employee_id: str, update_data: UserUp
 # -------------------------------
 # Change Password (Old + New)
 # -------------------------------
-@router.post("/change-password/{employee_id}")
+@router.patch("/change-password/{employee_id}")
 async def change_password(employee_id: str, data: PasswordUpdate):
     user = await User.find_one(User.employee_id == employee_id)
     if not user:
@@ -235,7 +235,7 @@ async def change_password(employee_id: str, data: PasswordUpdate):
 # -------------------------------
 # Forgot Password
 # -------------------------------
-@router.post("/forgot-password/{employee_id}")
+@router.patch("/forgot-password/{employee_id}")
 async def forgot_password(employee_id: str, data: PasswordReset):
     user = await User.find_one(User.employee_id == employee_id)
     if not user:
