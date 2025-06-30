@@ -7,11 +7,11 @@ from app.schemas.user import (
     UserLogin,
     PasswordUpdate,
     PasswordReset,
+    UserUpdate,  # Keep as is
 )
 from typing import List
 from collections import Counter
 from passlib.context import CryptContext
-from app.schemas.user import UserUpdate  # NEW: Add this import
 
 router = APIRouter()
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -212,3 +212,36 @@ async def update_employee(manager_id: str, employee_id: str, update_data: UserUp
     await employee.set(updates)
 
     return {"message": f"Employee {employee_id} updated successfully."}
+
+
+# -------------------------------
+# Change Password (Old + New)
+# -------------------------------
+@router.post("/change-password/{employee_id}")
+async def change_password(employee_id: str, data: PasswordUpdate):
+    user = await User.find_one(User.employee_id == employee_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    if not pwd_context.verify(data.old_password, user.password):
+        raise HTTPException(status_code=401, detail="Old password is incorrect.")
+
+    new_hashed = pwd_context.hash(data.new_password)
+    await user.set({"password": new_hashed})
+
+    return {"message": "Password updated successfully."}
+
+
+# -------------------------------
+# Forgot Password
+# -------------------------------
+@router.post("/forgot-password/{employee_id}")
+async def forgot_password(employee_id: str, data: PasswordReset):
+    user = await User.find_one(User.employee_id == employee_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    new_hashed = pwd_context.hash(data.new_password)
+    await user.set({"password": new_hashed})
+
+    return {"message": "Password reset successfully."}
