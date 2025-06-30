@@ -1,4 +1,3 @@
-
 # 🗂️ Feedback - Backend (FastAPI + MongoDB)
 
 This is the backend server for **Feedback** – a simple, secure, and structured feedback-sharing system between managers and employees.
@@ -21,17 +20,17 @@ This is the backend server for **Feedback** – a simple, secure, and structured
 
 ## 🛠️ Tech Stack
 
-| Layer        | Technology          |
-|--------------|---------------------|
-| Language     | Python 3.10+        |
-| Framework    | FastAPI             |
-| ORM          | Beanie (MongoDB ODM)|
-| Database     | MongoDB             |
-| Async Driver | Motor               |
-| Auth         | (Optional) JWT      |
-| PDF Export   | ReportLab           |
-| Markdown     | markdown2           |
-| Dev Tools    | Uvicorn, .env       |
+| Layer        | Technology           |
+| ------------ | -------------------- |
+| Language     | Python 3.10+         |
+| Framework    | FastAPI              |
+| ORM          | Beanie (MongoDB ODM) |
+| Database     | MongoDB              |
+| Async Driver | Motor                |
+| Auth         | (Optional) JWT       |
+| PDF Export   | ReportLab            |
+| Markdown     | markdown2            |
+| Dev Tools    | Uvicorn, .env        |
 
 ---
 
@@ -100,7 +99,7 @@ MONGODB_URI=mongodb://localhost:27017/feedbackdb
 uvicorn app.main:app --reload
 ```
 
-Visit the API docs at [http://localhost:8000/docs](http://localhost:8000/docs)
+Visit the API docs at [https://feedback-2uwd.onrender.com/docs](https://feedback-2uwd.onrender.com/docs)
 
 ---
 
@@ -108,8 +107,8 @@ Visit the API docs at [http://localhost:8000/docs](http://localhost:8000/docs)
 
 FastAPI auto-generates docs at:
 
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
+- Swagger UI: `https://feedback-2uwd.onrender.com/docs`
+- ReDoc: `https://feedback-2uwd.onrender.com/docs`
 
 ---
 
@@ -124,11 +123,8 @@ FastAPI auto-generates docs at:
 
 ---
 
-
 ## 🧪 Testing
 
 Use Postman or Thunder Client with the `/docs` page to test endpoints. Sample payloads are provided in docs.
 
 ---
-
-
