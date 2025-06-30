@@ -31,3 +31,13 @@ class PasswordUpdate(BaseModel):
 class PasswordReset(BaseModel):
     employee_id: str
     new_password: str
+
+# -----------------------------
+# NEW: Add this for updates
+# -----------------------------
+class UserUpdate(BaseModel):
+    name: Optional[str]
+    email: Optional[EmailStr]
+    password: Optional[str]
+    role: Optional[Literal["manager", "employee"]]
+    manager_employee_id: Optional[str]
