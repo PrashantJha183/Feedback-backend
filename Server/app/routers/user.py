@@ -163,7 +163,7 @@ async def get_employees_under_manager(manager_id: str):
 # -------------------------------
 # Delete employee - Manager Only
 # -------------------------------
-@router.delete("/users/{manager_id}/{employee_id}")
+@router.delete("/{manager_id}/{employee_id}")
 async def delete_employee(manager_id: str, employee_id: str):
     manager = await User.find_one(User.employee_id == manager_id)
     if not manager or manager.role != "manager":
@@ -186,7 +186,7 @@ async def delete_employee(manager_id: str, employee_id: str):
 # -------------------------------
 # Update employee - Manager Only
 # -------------------------------
-@router.put("/users/{manager_id}/{employee_id}")
+@router.put("/{manager_id}/{employee_id}")
 async def update_employee(manager_id: str, employee_id: str, update_data: UserUpdate):
     manager = await User.find_one(User.employee_id == manager_id)
     if not manager or manager.role != "manager":
