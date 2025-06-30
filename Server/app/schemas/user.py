@@ -38,6 +38,6 @@ class PasswordReset(BaseModel):
 class UserUpdate(BaseModel):
     name: Optional[str]
     email: Optional[EmailStr]
-    password: Optional[str]
+    password: Optional[str]     
     role: Optional[Literal["manager", "employee"]]
     manager_employee_id: Optional[str]
