@@ -66,8 +66,8 @@ app/
 1. **Clone the repo**
 
 ```bash
-git clone https://github.com/your-username/feedback.git
-cd feedback
+git clone https://github.com/PrashantJha183/Feedback-backend.git
+cd Server
 ```
 
 2. **Create virtual environment**
