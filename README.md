@@ -67,7 +67,7 @@ app/
 
 ```bash
 git clone https://github.com/PrashantJha183/Feedback-backend.git
-cd Server
+cd Feedback-backend
 ```
 
 2. **Create virtual environment**
